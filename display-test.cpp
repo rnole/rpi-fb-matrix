@@ -13,6 +13,7 @@
 #include "Config.h"
 #include "glcdfont.h"
 #include "GridTransformer.h"
+#include "utils.h"
 
 using namespace std;
 using namespace rgb_matrix;
@@ -23,26 +24,36 @@ using namespace rgb_matrix;
 // pressed, then the main loop will cleanly exit.
 volatile bool running = true;
 
+
+
 void printCanvas(Canvas* canvas, int x, int y, const string& message,
-                 int r = 255, int g = 255, int b = 255) {
+                 int r = 255, int g = 0, int b = 0) {
   // Loop through all the characters and print them starting at the provided
   // coordinates.
-  for (auto c: message) {
-    // Loop through each column of the character.
-    for (int i=0; i<5; ++i) {
-      unsigned char col = glcdfont[c*5+i];
-      x += 1;
-      // Loop through each row of the column.
-      for (int j=0; j<8; ++j) {
-        // Put a pixel for each 1 in the column byte.
-        if ((col >> j) & 0x01) {
-          canvas->SetPixel(x, y+j, r, g, b);
-        }
-      }
-    }
-    // Add a column of padding between characters.
-    x += 1;
-  }
+ int array_chars[256] = {0};
+ 
+ for(int pos=0;  pos< message.length(); pos++){
+	 for(int i=1; i <= 5; i++)
+		array_chars[pos*6 +i] = glcdfont[message.at(pos)*5 + i-1];
+ }
+
+ 
+ for(int loop=0; loop< message.length()*6 +1; loop++){
+	 x = 0;
+
+	 for(int i=loop; i < loop +64; i++){
+
+		for(int j=0; j <8; j++){
+			if((array_chars[i] >>j) & 0x01)
+				Transformer(canvas, x, y+j, 0xFF, 0, 0);
+			else
+				Transformer(canvas, x, y+j, 0, 0, 0);
+		}
+		x += 1;
+	 }
+	 usleep(100000);
+ }
+
 }
 
 static void sigintHandler(int s) {
@@ -93,17 +104,26 @@ int main(int argc, char** argv) {
 
     // Clear the canvas, then draw on each panel.
     canvas->Fill(0, 0, 0);
+
+    stringstream pos;
+    pos << "Temperatura:32" << '\xF8' << "C";
+    printCanvas(canvas, 0, 0, pos.str());
+
+    /*
     for (int j=0; j<panel_rows; ++j) {
-      for (int i=0; i<panel_columns; ++i) {
-        // Compute panel origin position.
-        int x = i*config.getPanelWidth();
-        int y = j*config.getPanelHeight();
-        // Print the current grid position to the top left (origin) of the panel.
-        stringstream pos;
-        pos << i << "," << j;
-        printCanvas(canvas, x, y, pos.str());
+    	for (int i=0; i<panel_columns; ++i) {
+        	// Compute panel origin position.
+        	int x = i*config.getPanelWidth();
+        	int y = j*config.getPanelHeight();
+        	// Print the current grid position to the top left (origin) of the panel.
+        	stringstream pos;
+        	pos << i << "," << j;
+       		printCanvas(canvas, x, y, pos.str());
       }
     }
+    */
+
+
     // Loop forever waiting for Ctrl-C signal to quit.
     signal(SIGINT, sigintHandler);
     cout << "Press Ctrl-C to quit..." << endl;

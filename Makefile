@@ -23,7 +23,7 @@ all: rpi-fb-matrix display-test
 rpi-fb-matrix: rpi-fb-matrix.o GridTransformer.o Config.o ./rpi-rgb-led-matrix/lib/librgbmatrix.a
 	$(CXX) -o $@ $^ $(CXXFLAGS) $(LIBS)
 
-display-test: display-test.o GridTransformer.o Config.o glcdfont.o ./rpi-rgb-led-matrix/lib/librgbmatrix.a
+display-test: display-test.o GridTransformer.o Config.o glcdfont.o utils.o ./rpi-rgb-led-matrix/lib/librgbmatrix.a
 	$(CXX) -o $@ $^ $(CXXFLAGS) $(LIBS)
 
 %.o: %.cpp $(DEPS)
