@@ -14,8 +14,8 @@ export USER_DEFINES=-DRGB_SLOWDOWN_GPIO=1
 
 # Configure compiler and libraries:
 CXX = g++
-CXXFLAGS = -Wall -std=c++11 -O3 -I. -I./rpi-rgb-led-matrix/include -I/opt/vc/include -I/opt/vc/include/interface/vcos/pthreads -I/opt/vc/include/interface/vmcs_host -I/opt/vc/include/interface/vmcs_host/linux -L./rpi-rgb-led-matrix/lib -L/opt/vc/lib
-LIBS = -lrgbmatrix -lrt -lm -lpthread -lbcm_host -lconfig++
+CXXFLAGS = -Wall -std=c++11 -O3 -I. -I./rpi-rgb-led-matrix/include -I/opt/vc/include -I/opt/vc/include/interface/vcos/pthreads -I/opt/vc/include/interface/vmcs_host -I/opt/vc/include/interface/vmcs_host/linux  -L./rpi-rgb-led-matrix/lib -L/opt/vc/lib -I/opt/curl/include -L/opt/curl/lib
+LIBS = -lrgbmatrix -lrt -lm -lpthread -lbcm_host -lconfig++ -lcurl -ljson
 
 # Makefile rules:
 all: rpi-fb-matrix display-test
@@ -23,7 +23,7 @@ all: rpi-fb-matrix display-test
 rpi-fb-matrix: rpi-fb-matrix.o GridTransformer.o Config.o ./rpi-rgb-led-matrix/lib/librgbmatrix.a
 	$(CXX) -o $@ $^ $(CXXFLAGS) $(LIBS)
 
-display-test: display-test.o GridTransformer.o Config.o glcdfont.o utils.o ./rpi-rgb-led-matrix/lib/librgbmatrix.a
+display-test: display-test.o GridTransformer.o Config.o glcdfont.o utils.o libcurl.o ./rpi-rgb-led-matrix/lib/librgbmatrix.a
 	$(CXX) -o $@ $^ $(CXXFLAGS) $(LIBS)
 
 %.o: %.cpp $(DEPS)

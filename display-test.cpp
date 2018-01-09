@@ -9,11 +9,13 @@
 #include <led-matrix.h>
 #include <signal.h>
 #include <unistd.h>
+#include <json/json.h>
 
 #include "Config.h"
 #include "glcdfont.h"
 #include "GridTransformer.h"
 #include "utils.h"
+#include "libcurl.h"
 
 using namespace std;
 using namespace rgb_matrix;
@@ -23,6 +25,44 @@ using namespace rgb_matrix;
 // Will be set false by a SIGINT handler when ctrl-c is
 // pressed, then the main loop will cleanly exit.
 volatile bool running = true;
+
+static int temperature_value = 0;
+static int humidity_value = 0;
+static int noise_value = 0;
+
+
+void json_parse(json_object *jobj){
+
+	json_object *jarray = jobj;
+	json_object *jvalue;
+	json_object *jval_temperature;
+	json_object *jval_humidity;
+	json_object *jval_noise;
+		
+	json_object_object_get_ex(jobj, "message", &jarray);
+
+	int arraylen = json_object_array_length(jarray);
+	printf("Array length: %d\n", arraylen);
+	
+	jvalue = json_object_array_get_idx(jarray, 7);
+	json_object_object_get_ex(jvalue, "temp", &jval_temperature);
+	
+	jvalue = json_object_array_get_idx(jarray, 8);
+	json_object_object_get_ex(jvalue, "hum", &jval_humidity);
+	
+	jvalue = json_object_array_get_idx(jarray, 14);
+	json_object_object_get_ex(jvalue, "sonido", &jval_noise);
+
+	temperature_value = json_object_get_int(jval_temperature);
+	humidity_value    = json_object_get_int(jval_humidity);
+	noise_value       = json_object_get_int(jval_noise);
+
+		
+	printf("Noise: %d\n", json_object_get_int(jval_noise));
+	printf("Temperature: %d\n", json_object_get_int(jval_temperature));
+	printf("Humidity: %d\n", json_object_get_int(jval_humidity));
+	
+}
 
 
 
@@ -105,24 +145,41 @@ int main(int argc, char** argv) {
     // Clear the canvas, then draw on each panel.
     canvas->Fill(0, 0, 0);
 
-    stringstream pos;
-    pos << "Temperatura:32" << '\xF8' << "C";
-    printCanvas(canvas, 0, 0, pos.str());
+    CURL *conn = NULL;
+    CURLcode code;
+    curl_global_init(CURL_GLOBAL_DEFAULT);
 
-    /*
-    for (int j=0; j<panel_rows; ++j) {
-    	for (int i=0; i<panel_columns; ++i) {
-        	// Compute panel origin position.
-        	int x = i*config.getPanelWidth();
-        	int y = j*config.getPanelHeight();
-        	// Print the current grid position to the top left (origin) of the panel.
-        	stringstream pos;
-        	pos << i << "," << j;
-       		printCanvas(canvas, x, y, pos.str());
-      }
+
+    // Initialize CURL connection
+    if(!init(conn, argv[2])) {
+	fprintf(stderr, "Connection initializion failed\n");
+	exit(EXIT_FAILURE);
     }
-    */
 
+
+    // Retrieve content for the URL
+    code = curl_easy_perform(conn);
+    curl_easy_cleanup(conn);
+
+    if(code != CURLE_OK) {
+	fprintf(stderr, "Failed to get website\n");
+	exit(EXIT_FAILURE);
+    }
+
+    char *buffer_str = (char *)buffer.c_str();	
+    json_object *jobj= json_tokener_parse(buffer_str);
+    json_parse(jobj);
+
+
+    stringstream temperature;
+    stringstream humidity;
+    stringstream noise;
+    temperature << "Temperatura:" << temperature_value << '\xF8' << "C";
+    humidity	<< "Humedad:" << humidity_value  << "%";
+    noise	<< "Ruido:" << noise_value  << "dB";
+    printCanvas(canvas, 0, 0, temperature.str());
+    printCanvas(canvas, 0, 10, humidity.str());
+    printCanvas(canvas, 0, 20, noise.str());
 
     // Loop forever waiting for Ctrl-C signal to quit.
     signal(SIGINT, sigintHandler);
@@ -140,3 +197,6 @@ int main(int argc, char** argv) {
   }
   return 0;
 }
+
+
+
